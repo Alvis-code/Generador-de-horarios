@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generador de Horarios - Ingeniería Industrial</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/lucide-static@0.1.0/dist/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <div class="min-h-screen p-6 max-w-7xl mx-auto">
+    <header class="mb-6">
+      <div class="rounded-xl bg-white p-6 shadow flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-700 to-teal-500 flex items-center justify-center text-white text-xl font-bold">II</div>
+        <div>
+          <h1 class="text-2xl font-semibold">Generador de Horarios — Ingeniería Industrial</h1>
+          <p class="text-sm text-gray-500">Interfaz web mínima, visual y exportable. Mantiene la lógica original del generador Python.</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid grid-cols-12 gap-6">
+      <section class="col-span-4">
+        <div class="rounded-xl bg-white p-4 shadow space-y-4">
+          <h2 class="text-lg font-medium">1. Semestres</h2>
+          <div id="semestres-container" class="space-y-2 max-h-48 overflow-auto"></div>
+
+          <h2 class="text-lg font-medium mt-4">2. Cursos disponibles</h2>
+          <div class="border rounded p-2 max-h-48 overflow-auto bg-gray-50" id="cursos-container"></div>
+          <div class="flex gap-2 mt-2">
+            <button id="btn-add-cursos" class="btn-primary flex-1">Agregar seleccionados</button>
+            <button id="btn-load-sample" class="btn-ghost">Cargar ejemplo</button>
+          </div>
+
+          <h2 class="text-lg font-medium mt-4">3. Guardar / Cargar</h2>
+          <div class="flex gap-2">
+            <button id="btn-export-json" class="btn-outline flex-1">Exportar JSON</button>
+            <input id="import-json" type="file" accept=".json" class="hidden">
+            <button id="btn-import-json" class="btn-outline">Importar</button>
+          </div>
+          <div class="flex gap-2 mt-2">
+            <button id="btn-export-png" class="btn-outline flex-1">Exportar Imagen (horario)</button>
+            <button id="btn-export-pdf" class="btn-primary flex-1">Exportar PDF</button>
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-white p-4 shadow mt-4">
+          <h2 class="text-lg font-medium">Combinaciones</h2>
+          <div id="combinaciones-info" class="text-sm text-gray-600">No se han generado combinaciones.</div>
+          <div id="combinaciones-list" class="max-h-48 overflow-auto mt-2 space-y-2"></div>
+          <div class="flex gap-2 mt-3">
+            <button id="btn-generar" class="btn-primary flex-1">Generar combinaciones</button>
+            <button id="btn-preview-selected" class="btn-ghost flex-1">Previsualizar seleccionadas</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="col-span-8">
+        <div class="rounded-xl bg-white p-4 shadow">
+          <h2 class="text-lg font-medium">Configuración de cursos y grupos</h2>
+          <div id="config-cursos" class="mt-3 space-y-4"></div>
+        </div>
+
+        <div class="rounded-xl bg-white p-4 shadow mt-6">
+          <h2 class="text-lg font-medium">Previsualización</h2>
+          <div id="preview-area" class="mt-3">
+            <div id="schedule-canvas" class="rounded-lg border bg-white p-4"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
