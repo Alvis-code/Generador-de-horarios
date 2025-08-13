@@ -1,8 +1,10 @@
-// app.js - port of schedule logic from Python to JS (keeps same overlap rule)
-// Data structures:
-// planEstudios (loaded from plan_estudios.json)
-// cursosHorarios: { codigo: { A: { grupo:'A', horarios:[{día, inicio, fin}], tipo:'' }, ... }, ... }
-// cursosSeleccionados: { codigo: {nombre, creditos} }
+\
+/* app.js - updated:
+   - predefined time slots for inicio/fin (selects)
+   - discrete slot-based drawing so blocks align to grid cells
+   - legend below schedule with course name, group and color
+   - annotate groups with cursoCodigo and cursoNombre for rendering
+*/
 
 let planEstudios = {};
 let cursosHorarios = {};
@@ -11,6 +13,18 @@ let combinacionesGeneradas = [];
 let combinacionesVars = []; // booleans
 
 const dias = ["LUNES","MARTES","MIERCOLES","JUEVES","VIERNES"];
+
+// time slot definitions (match the original Python order)
+const timeSlots = [
+  ["07:00","07:50"], ["07:50","08:40"], ["08:50","09:40"], ["09:40","10:30"],
+  ["10:40","11:30"], ["11:30","12:20"], ["12:20","13:10"], ["13:10","14:00"],
+  ["14:00","14:50"], ["14:50","15:40"], ["15:50","16:40"], ["16:40","17:30"],
+  ["17:40","18:30"], ["18:30","19:20"], ["19:20","20:10"], ["20:10","21:00"]
+];
+
+// flattened arrays for select options
+const inicioOptions = timeSlots.map(s=>s[0]);
+const finOptions = timeSlots.map(s=>s[1]);
 
 // Util
 function horaAMinutos(horaStr){
@@ -49,16 +63,19 @@ function cartesian(arrays){
   return result;
 }
 
-// Combinaciones válidas
+// Combinaciones válidas (annotate groups with curso info)
 function combinacionesValidas(){
   const cursos_grupos = [];
   const codigos = Object.keys(cursosSeleccionados);
   for(const codigo of codigos){
     if(cursosHorarios[codigo]){
-      // take groups as array
       const gruposObj = cursosHorarios[codigo];
-      const grupos = Object.values(gruposObj).filter(g => g && g.horarios && g.horarios.length>0);
-      cursos_grupos.push(grupos);
+      // annotate group objects with cursoCodigo and cursoNombre (without mutating original)
+      const grupos = Object.keys(gruposObj).map(k => {
+        const g = gruposObj[k];
+        return { ...g, cursoCodigo: codigo, cursoNombre: cursosSeleccionados[codigo].nombre };
+      }).filter(g => g && g.horarios && g.horarios.length>0);
+      if(grupos.length>0) cursos_grupos.push(grupos);
     }
   }
   if(cursos_grupos.length === 0) return [];
@@ -91,7 +108,7 @@ function renderSemestres(){
   const container = document.getElementById('semestres-container');
   container.innerHTML = '';
   Object.keys(planEstudios).forEach(sem => {
-    const id = 'sem_'+sem.replace(/\s+/g,'_');
+    const id = 'sem_'+sem.replace(/\\s+/g,'_');
     const div = document.createElement('div');
     div.className = 'flex items-center gap-2';
     div.innerHTML = `<input type="checkbox" id="${id}" data-sem="${sem}" class="sem-checkbox"><label for="${id}" class="text-sm ml-1">${sem}</label>`;
@@ -106,7 +123,6 @@ function renderSemestres(){
 function renderCursosDisponibles(){
   const container = document.getElementById('cursos-container');
   container.innerHTML = '';
-  // get selected semestres
   const selected = [];
   document.querySelectorAll('.sem-checkbox:checked').forEach(cb=>{
     selected.push(cb.dataset.sem);
@@ -114,10 +130,9 @@ function renderCursosDisponibles(){
   const table = document.createElement('div');
   table.className = 'space-y-1';
   selected.forEach(sem=>{
-    const cursos = planEstudios[sem];
+    const cursos = planEstudios[sem] || {};
     Object.keys(cursos).forEach(cod=>{
       const c = cursos[cod];
-      const id = 'curso_' + cod;
       const row = document.createElement('div');
       row.className = 'flex items-center justify-between p-1';
       row.innerHTML = `<label class="flex items-center gap-2"><input type="checkbox" data-codigo="${cod}" data-nombre="${c.nombre}" class="curso-checkbox"> <span class="text-sm">${c.nombre} <span class="text-xs text-gray-400">(${cod})</span></span></label>`;
@@ -132,13 +147,12 @@ document.getElementById('btn-add-cursos').addEventListener('click', ()=>{
     const codigo = cb.dataset.codigo;
     const nombre = cb.dataset.nombre;
     cursosSeleccionados[codigo] = {nombre, creditos: 0};
-    if(!cursosHorarios[codigo]) cursosHorarios[codigo] = {}; // empty groups
+    if(!cursosHorarios[codigo]) cursosHorarios[codigo] = {};
   });
   renderConfigCursos();
 });
 
 document.getElementById('btn-load-sample').addEventListener('click', ()=>{
-  // load a small sample for quick testing: take first semester's first two courses
   const sems = Object.keys(planEstudios);
   if(sems.length>0){
     const cursos = planEstudios[sems[0]];
@@ -170,12 +184,10 @@ function renderConfigCursos(){
     <div class="groups mt-2" id="groups_${codigo}"></div>`;
     container.appendChild(card);
 
-    // ensure exists
     if(!cursosHorarios[codigo]) cursosHorarios[codigo] = {};
     renderGroups(codigo);
   });
 
-  // attach actions
   document.querySelectorAll('[data-action="add-group"]').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       const codigo = btn.dataset.codigo;
@@ -224,10 +236,8 @@ function renderGroups(codigo){
     <div class="horarios-list mt-2" id="horarios_${codigo}_${g.grupo}"></div>`;
     container.appendChild(gDiv);
 
-    // render horarios
     renderHorariosList(codigo, g.grupo);
 
-    // attach buttons
     gDiv.querySelector('.btn-add-horario').addEventListener('click', ()=>{
       addHorario(codigo, g.grupo);
       renderHorariosList(codigo, g.grupo);
@@ -243,22 +253,25 @@ function renderHorariosList(codigo, grupo){
   const list = document.getElementById(`horarios_${codigo}_${grupo}`);
   list.innerHTML = '';
   const g = cursosHorarios[codigo][grupo];
-  g.horarios.forEach((hidx, idx)=>{
-    // each horario
-  });
   // show existing horarios
   g.horarios.forEach((h, idx)=>{
     const row = document.createElement('div');
     row.className = 'flex items-center gap-2 mb-1';
+    // build select options for inicio and fin using predefined arrays
+    const inicioSel = `<select class="input-dia input-inicio text-xs" data-codigo="${codigo}" data-grupo="${grupo}" data-idx="${idx}">
+      ${inicioOptions.map(val=>`<option value="${val}" ${val===h.inicio?'selected':''}>${val}</option>`).join('')}
+    </select>`;
+    const finSel = `<select class="input-fin text-xs" data-codigo="${codigo}" data-grupo="${grupo}" data-idx="${idx}">
+      ${finOptions.map(val=>`<option value="${val}" ${val===h.fin?'selected':''}>${val}</option>`).join('')}
+    </select>`;
     row.innerHTML = `<select class="input-dia text-xs" data-codigo="${codigo}" data-grupo="${grupo}" data-idx="${idx}">
       ${dias.map(d=>`<option value="${d}" ${d===h.día?'selected':''}>${d}</option>`).join('')}
     </select>
-    <input type="time" class="input-inicio text-xs" value="${h.inicio}" data-codigo="${codigo}" data-grupo="${grupo}" data-idx="${idx}">
-    <input type="time" class="input-fin text-xs" value="${h.fin}" data-codigo="${codigo}" data-grupo="${grupo}" data-idx="${idx}">
+    ${inicioSel}
+    ${finSel}
     <button class="btn-ghost btn-remove-h text-xs" data-codigo="${codigo}" data-grupo="${grupo}" data-idx="${idx}">Eliminar</button>`;
     list.appendChild(row);
   });
-  // add a button to add if none
   if(g.horarios.length===0){
     const hint = document.createElement('div');
     hint.className = 'text-xs text-gray-400';
@@ -266,7 +279,6 @@ function renderHorariosList(codigo, grupo){
     list.appendChild(hint);
   }
 
-  // attach remove handlers and inputs change
   list.querySelectorAll('.btn-remove-h').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const codigo = btn.dataset.codigo, grupo = btn.dataset.grupo, idx = parseInt(btn.dataset.idx,10);
@@ -278,24 +290,22 @@ function renderHorariosList(codigo, grupo){
     inp.addEventListener('change', (e)=>{
       const codigo = inp.dataset.codigo, grupo = inp.dataset.grupo, idx = parseInt(inp.dataset.idx,10);
       const h = cursosHorarios[codigo][grupo].horarios[idx];
-      h.inicio = (e.target.classList.contains('input-inicio')) ? e.target.value : h.inicio;
-      h.fin = (e.target.classList.contains('input-fin')) ? e.target.value : h.fin;
-      h.día = (e.target.classList.contains('input-dia')) ? e.target.value : h.día;
+      if(e.target.classList.contains('input-inicio')) h.inicio = e.target.value;
+      if(e.target.classList.contains('input-fin')) h.fin = e.target.value;
+      if(e.target.classList.contains('input-dia')) h.día = e.target.value;
     });
   });
 }
 
-// addHorario: push a default horario
 function addHorario(codigo, grupo){
   if(!cursosHorarios[codigo][grupo]) return;
   cursosHorarios[codigo][grupo].horarios.push({
     "día": "LUNES",
-    "inicio": "08:00",
-    "fin": "10:00"
+    "inicio": inicioOptions[0],
+    "fin": finOptions[0]
   });
 }
 
-// Generate combinations and render list
 document.getElementById('btn-generar').addEventListener('click', ()=>{
   const valid = combinacionesValidas();
   combinacionesGeneradas = valid;
@@ -323,93 +333,126 @@ document.getElementById('btn-generar').addEventListener('click', ()=>{
   });
 });
 
-// Preview a single combination (draw schedule)
 function previewCombinacion(idx){
   if(idx<0 || idx>=combinacionesGeneradas.length) return;
   const comb = combinacionesGeneradas[idx];
   drawHorario(comb);
 }
 
-// Preview selected combinations (draw first selected)
 document.getElementById('btn-preview-selected').addEventListener('click', ()=>{
   const i = combinacionesVars.findIndex(v=>v);
   if(i===-1){ alert('Selecciona al menos una combinación.'); return;}  
   previewCombinacion(i);
 });
 
-// Draw schedule grid
 function drawHorario(combinacion){
   const area = document.getElementById('schedule-canvas');
   area.innerHTML = '';
-  // create header with days
+  // create header with days and grid
+  const slotHeight = 36; // px per time slot
   const grid = document.createElement('div');
   grid.className = 'schedule-grid';
   // times column
   const timesCol = document.createElement('div');
   timesCol.className = 'p-2';
+  timesCol.style.minWidth = '80px';
   timesCol.innerHTML = '<div class="text-xs font-semibold">Horas</div>';
-  // hours from 7 to 22 step 1
-  for(let h=7; h<=22; h++){
+  timeSlots.forEach(s => {
     const cell = document.createElement('div');
     cell.className = 'time-cell';
-    cell.textContent = `${h.toString().padStart(2,'0')}:00`;
+    cell.style.height = slotHeight + 'px';
+    cell.textContent = s[0] + ' - ' + s[1];
     timesCol.appendChild(cell);
-  }
+  });
   grid.appendChild(timesCol);
-  // day columns
+
   dias.forEach(d=>{
     const col = document.createElement('div');
     col.className = 'day-column';
+    col.style.position = 'relative';
+    col.style.minHeight = (slotHeight * timeSlots.length + 28) + 'px'; // extra for title
     const title = document.createElement('div');
     title.className = 'text-sm font-semibold mb-2';
     title.textContent = d;
     col.appendChild(title);
-    // background slots
-    for(let h=7; h<=22; h++){
+    // background slots (visual)
+    timeSlots.forEach(s => {
       const cell = document.createElement('div');
       cell.className = 'time-cell';
+      cell.style.height = slotHeight + 'px';
       col.appendChild(cell);
-    }
+    });
     grid.appendChild(col);
   });
   area.appendChild(grid);
 
-  // place course blocks
-  // assign colors per course
-  const palette = ['#0b3d91','#1fb6a6','#f59e0b','#ef4444','#7c3aed','#06b6d4'];
-  const courseToColor = {};
+  const legend = document.createElement('div');
+  legend.id = 'schedule-legend';
+  legend.style.marginTop = '12px';
+  legend.style.display = 'flex';
+  legend.style.flexWrap = 'wrap';
+  legend.style.gap = '8px';
+  area.appendChild(legend);
+
+  const palette = ['#0b3d91','#1fb6a6','#f59e0b','#ef4444','#7c3aed','#06b6d4','#f97316','#0ea5a3'];
+
   combinacion.forEach((g, idx)=>{
-    const cursoNombre = g.cursoNombre || ('Grupo '+g.grupo);
-    courseToColor[cursoNombre] = palette[idx % palette.length];
-  });
-  // Place blocks: compute position by time
-  combinacion.forEach((g, idx)=>{
-    g.horarios.forEach(h=>{
+    const color = palette[idx % palette.length];
+
+    const legendItem = document.createElement('div');
+    legendItem.style.display = 'flex';
+    legendItem.style.alignItems = 'center';
+    legendItem.style.gap = '8px';
+    legendItem.style.padding = '6px 8px';
+    legendItem.style.borderRadius = '8px';
+    legendItem.style.background = '#ffffff';
+    legendItem.style.boxShadow = '0 6px 14px rgba(2,6,23,0.04)';
+    legendItem.innerHTML = `<div style="width:12px;height:12px;border-radius:4px;background:${color}"></div><div style="font-size:13px"><strong style="display:block">${g.cursoNombre}</strong><span style="font-size:12px;color:#666">Grupo ${g.grupo}</span></div>`;
+    legend.appendChild(legendItem);
+
+    g.horarios.forEach(h => {
       const dayIndex = dias.indexOf(h["día"]);
       if(dayIndex===-1) return;
-      const start = horaAMinutos(h.inicio);
-      const end = horaAMinutos(h.fin);
-      const topHours = (start - 7*60)/60; // number of hours from 7:00
-      const durationHours = (end - start)/60;
-      // create block element positioned relative inside day column
+
+      const startIdx = timeSlots.findIndex(s => s[0] === h.inicio);
+      const endIdx = timeSlots.findIndex(s => s[1] === h.fin);
+      let top = 0, height = 0;
+      if(startIdx !== -1 && endIdx !== -1){
+        top = startIdx * slotHeight + 28; // 28 for day title area roughly
+        height = (endIdx - startIdx + 1) * slotHeight - 6; // small padding
+      } else {
+
+        const start = horaAMinutos(h.inicio);
+        const end = horaAMinutos(h.fin);
+        const base = horaAMinutos(timeSlots[0][0]); # 07:00
+        top = ((start - base) / 60) * slotHeight + 28;
+        height = ((end - start) / 60) * slotHeight - 6;
+      }
       const dayCols = area.querySelectorAll('.day-column');
       const col = dayCols[dayIndex];
       const block = document.createElement('div');
-      const color = palette[idx % palette.length];
       block.className = 'course-block';
       block.style.background = color;
-      block.style.marginTop = (topHours*30)+'px';
-      block.style.height = (durationHours*30 - 6)+'px';
-      block.style.position = 'relative';
-      block.textContent = `${g.grupo} ${h.inicio}-${h.fin}`;
-      block.title = `${g.grupo} ${h.inicio}-${h.fin}`;
-      // append
+      block.style.position = 'absolute';
+      block.style.left = '8px';
+      block.style.right = '8px';
+      block.style.top = top + 'px';
+      block.style.height = Math.max(20, height) + 'px';
+      block.style.zIndex = 10;
+      block.style.display = 'flex';
+      block.style.flexDirection = 'column';
+      block.style.justifyContent = 'center';
+      block.style.padding = '6px';
+      block.style.boxSizing = 'border-box';
+
+      const shortName = g.cursoNombre.length > 28 ? g.cursoNombre.slice(0,25)+'...' : g.cursoNombre;
+      block.innerHTML = `<div style="font-weight:700;font-size:12px">${shortName}</div><div style="font-size:11px;font-weight:600">${g.grupo} • ${h.inicio}-${h.fin}</div>`;
       col.appendChild(block);
     });
   });
 }
 
-// Export functions
+// Export functions (export captures the schedule-canvas which now includes legend)
 document.getElementById('btn-export-json').addEventListener('click', ()=>{
   const data = {cursosHorarios, cursosSeleccionados};
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -455,7 +498,7 @@ document.getElementById('btn-export-pdf').addEventListener('click', async ()=>{
     // draw to preview then render
     drawHorario(comb);
     await new Promise(r=>setTimeout(r,150)); // allow DOM update
-    const canvas = await html2canvas(document.getElementById('schedule-canvas'), {scale:1.5});
+    const canvas = await html2canvas(document.getElementById('schedule-canvas'), {scale:1.5, useCORS:true});
     const img = canvas.toDataURL('image/png');
     const imgProps = pdf.getImageProperties(img);
     const pdfW = pdf.internal.pageSize.getWidth();
