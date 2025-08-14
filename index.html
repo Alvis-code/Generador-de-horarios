@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Generador de Horarios - Ingeniería Industrial</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/lucide-static@0.1.0/dist/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="styles.css">
@@ -27,22 +26,26 @@
         <div class="rounded-xl bg-white p-4 shadow space-y-4">
           <h2 class="text-lg font-medium">1. Semestres</h2>
           <div id="semestres-container" class="space-y-2 max-h-48 overflow-auto"></div>
+          <div id="plan-upload" class="text-sm text-gray-500 hidden">
+            <p>Si no ves semestres, puedes <button id="btn-upload-plan" class="btn-primary">subir plan_estudios.json</button></p>
+            <input id="file-plan" type="file" accept=".json" class="hidden" />
+          </div>
 
           <h2 class="text-lg font-medium mt-4">2. Cursos disponibles</h2>
           <div class="border rounded p-2 max-h-48 overflow-auto bg-gray-50" id="cursos-container"></div>
           <div class="flex gap-2 mt-2">
             <button id="btn-add-cursos" class="btn-primary flex-1">Agregar seleccionados</button>
-            <button id="btn-load-sample" class="btn-ghost">Cargar ejemplo</button>
+            <button id="btn-load-sample" class="btn-primary flex-1">Cargar ejemplo</button>
           </div>
 
           <h2 class="text-lg font-medium mt-4">3. Guardar / Cargar</h2>
           <div class="flex gap-2">
-            <button id="btn-export-json" class="btn-outline flex-1">Exportar JSON</button>
+            <button id="btn-export-json" class="btn-primary flex-1">Exportar JSON</button>
             <input id="import-json" type="file" accept=".json" class="hidden">
-            <button id="btn-import-json" class="btn-outline">Importar</button>
+            <button id="btn-import-json" class="btn-primary">Importar</button>
           </div>
           <div class="flex gap-2 mt-2">
-            <button id="btn-export-png" class="btn-outline flex-1">Exportar Imagen (horario)</button>
+            <button id="btn-export-png" class="btn-primary flex-1">Exportar Imagen (horario)</button>
             <button id="btn-export-pdf" class="btn-primary flex-1">Exportar PDF</button>
           </div>
         </div>
@@ -53,7 +56,7 @@
           <div id="combinaciones-list" class="max-h-48 overflow-auto mt-2 space-y-2"></div>
           <div class="flex gap-2 mt-3">
             <button id="btn-generar" class="btn-primary flex-1">Generar combinaciones</button>
-            <button id="btn-preview-selected" class="btn-ghost flex-1">Previsualizar seleccionadas</button>
+            <button id="btn-preview-selected" class="btn-primary flex-1">Previsualizar seleccionadas</button>
           </div>
         </div>
       </section>
