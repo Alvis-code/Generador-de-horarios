@@ -44,7 +44,7 @@ body{
 
 .schedule-grid{
   display:grid;
-  grid-template-columns: 100px repeat(5, 1fr);
+  grid-template-columns: 80px repeat(5, 1fr);
   gap:8px;
   align-items:start;
 }
@@ -54,10 +54,9 @@ body{
   padding:8px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
   border:1px solid #eef6fb;
-  position: relative;
 }
 .time-cell{
-  height:36px;
+  height:30px;
   border-bottom:1px solid #f1f5f9;
   font-size:12px;
   color:var(--muted);
