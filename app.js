@@ -40,7 +40,22 @@ function combinacionesValidas(){
 }
 
 // try to fetch plan; if not available, reveal upload control
+
+// loadPlan: prefer embedded plan-data script if present (for GitHub Pages reliability)
 async function loadPlan(){
+  // try embedded JSON first
+  try{
+    const el = document.getElementById('plan-data');
+    if(el && el.textContent && el.textContent.trim() !== ''){
+      planEstudios = JSON.parse(el.textContent);
+      renderSemestres();
+      return;
+    }
+  }catch(e){
+    // fallthrough to fetch
+    console.warn('Embedded plan-data parsing failed, falling back to fetch.', e);
+  }
+  // fallback to fetch (previous behavior)
   try{
     const res = await fetch('plan_estudios.json', {cache:'no-store'});
     if(!res.ok) throw new Error('not ok');
@@ -51,6 +66,13 @@ async function loadPlan(){
       const idx = upperKeys.indexOf('PLAN_ESTUDIOS');
       if(idx !== -1 && typeof p[Object.keys(p)[idx]] === 'object') p = p[Object.keys(p)[idx]];
     }
+    planEstudios = p;
+  }catch(err){
+    planEstudios = {};
+    document.getElementById('plan-upload')?.classList.remove('hidden');
+  }
+  renderSemestres();
+}
     planEstudios = p;
   }catch(err){
     planEstudios = {};
